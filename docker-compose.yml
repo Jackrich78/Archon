@@ -1,11 +1,76 @@
 # Docker Compose profiles:
 # - Default (no profile): Starts archon-server, archon-mcp, and archon-frontend
 # - Agents are opt-in: archon-agents starts only with the "agents" profile
+# - Local database: archon-db and archon-postgrest start only with the "localdb" profile
 # Usage:
 #   docker compose up                        # Starts server, mcp, frontend (agents disabled)
 #   docker compose --profile agents up -d    # Also starts archon-agents
+#   docker compose --profile localdb up -d   # Starts local PostgreSQL + PostgREST
 
 services:
+  # =====================================================
+  # LOCAL DATABASE SERVICES (opt-in with --profile localdb)
+  # =====================================================
+
+  # PostgreSQL 17 + pgvector
+  archon-db:
+    profiles:
+      - localdb
+    image: pgvector/pgvector:pg17
+    container_name: archon-db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=archon
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - archon_postgres_data:/var/lib/postgresql/data
+      - ./python/init-scripts:/docker-entrypoint-initdb.d:ro
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d archon"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    command:
+      - "postgres"
+      - "-c"
+      - "shared_preload_libraries=vector"
+      - "-c"
+      - "max_connections=100"
+
+  # PostgREST API layer
+  archon-postgrest:
+    profiles:
+      - localdb
+    image: postgrest/postgrest:latest
+    container_name: archon-postgrest
+    ports:
+      - "3000:3000"
+    environment:
+      - PGRST_DB_URI=postgresql://postgres:${POSTGRES_PASSWORD}@archon-db:5432/archon
+      - PGRST_DB_SCHEMA=public
+      - PGRST_DB_ANON_ROLE=anon
+      - PGRST_JWT_SECRET=${JWT_SECRET}
+      - PGRST_OPENAPI_SERVER_PROXY_URI=http://localhost:3000
+    networks:
+      - app-network
+    depends_on:
+      archon-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # =====================================================
+  # ARCHON APPLICATION SERVICES
+  # =====================================================
   # Server Service (FastAPI + Socket.IO + Crawling)
   archon-server:
     build:
@@ -179,3 +244,7 @@ services:
 networks:
   app-network:
     driver: bridge
+
+volumes:
+  archon_postgres_data:
+    name: archon_postgres_data

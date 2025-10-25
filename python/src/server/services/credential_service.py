@@ -17,9 +17,10 @@ from typing import Any
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-from supabase import Client, create_client
+from supabase import Client
 
 from ..config.logfire_config import get_logger
+from .client_manager import get_supabase_client as get_shared_supabase_client
 
 logger = get_logger(__name__)
 
@@ -52,28 +53,13 @@ class CredentialService:
     def _get_supabase_client(self) -> Client:
         """
         Get or create a properly configured Supabase client using environment variables.
-        Uses the standard Supabase client initialization.
+        Uses the shared client_manager to handle both cloud and local PostgREST connections.
         """
         if self._supabase is None:
-            url = os.getenv("SUPABASE_URL")
-            key = os.getenv("SUPABASE_SERVICE_KEY")
-
-            if not url or not key:
-                raise ValueError(
-                    "SUPABASE_URL and SUPABASE_SERVICE_KEY must be set in environment variables"
-                )
-
             try:
-                # Initialize with standard Supabase client - no need for custom headers
-                self._supabase = create_client(url, key)
-
-                # Extract project ID from URL for logging purposes only
-                match = re.match(r"https://([^.]+)\.supabase\.co", url)
-                if match:
-                    project_id = match.group(1)
-                    logger.debug(f"Supabase client initialized for project: {project_id}")
-                else:
-                    logger.debug("Supabase client initialized successfully")
+                # Use the shared client manager which properly handles local PostgREST vs cloud Supabase
+                self._supabase = get_shared_supabase_client()
+                logger.debug("Supabase client initialized via client_manager")
 
             except Exception as e:
                 logger.error(f"Error initializing Supabase client: {e}")

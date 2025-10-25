@@ -44,6 +44,47 @@ This new vision for Archon replaces the old one (the agenteer). Archon used to b
 - **[Archon Kanban Board](https://github.com/users/coleam00/projects/1)** - Where maintainers are managing issues/features
 - **[Dynamous AI Mastery](https://dynamous.ai)** - The birthplace of Archon - come join a vibrant community of other early AI adopters all helping each other transform their careers and businesses!
 
+## Database Setup
+
+Archon uses PostgreSQL with pgvector. **We recommend local database** for better performance, privacy, and no usage limits.
+
+### Recommended: Local PostgreSQL + PostgREST
+
+Run your own database - no cloud dependencies, no costs, full control.
+
+**Setup:**
+1. Follow Quick Start steps 1-2 (clone repo, create `.env`)
+2. Generate credentials:
+   ```bash
+   docker run --rm -v $(pwd)/migration:/migration node:18 node /migration/scripts/generate_jwt.js
+   ```
+3. Copy values from `migration/generated_secrets.env.template` to `.env`:
+   - `SUPABASE_URL=http://archon-postgrest:3000`
+   - `SUPABASE_SERVICE_KEY=` (from generated file)
+   - `POSTGRES_PASSWORD=` (from generated file)
+   - `JWT_SECRET=` (from generated file)
+4. Start and initialize database:
+   ```bash
+   docker compose --profile localdb up -d
+   docker exec -i archon-db psql -U postgres -d archon < migration/sql/complete_setup.sql
+   ```
+5. Continue to Quick Start step 4 (Start Services)
+
+### Alternative: Cloud Supabase
+
+Good for quick testing or if you prefer managed services.
+
+**Setup:**
+1. Create account at [supabase.com](https://supabase.com/)
+2. Create project, get credentials (Settings → API → **service_role** key)
+3. Set in `.env`: `SUPABASE_URL` and `SUPABASE_SERVICE_KEY`
+4. Run `migration/sql/complete_setup.sql` in Supabase SQL Editor
+5. Continue to Quick Start step 4
+
+**Migrating Cloud→Local?** See [`migration/MIGRATION_GUIDE.md`](migration/MIGRATION_GUIDE.md)
+
+---
+
 ## Quick Start
 
 <p align="center">
@@ -60,7 +101,9 @@ This new vision for Archon replaces the old one (the agenteer). Archon used to b
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 - [Node.js 18+](https://nodejs.org/) (for hybrid development mode)
-- [Supabase](https://supabase.com/) account (free tier or local Supabase both work)
+- **Database** (choose one):
+  - Cloud Supabase account at [supabase.com](https://supabase.com/) (free tier works), OR
+  - Local PostgreSQL via Docker (included in Archon setup - see [Database Setup](#database-setup))
 - [OpenAI API key](https://platform.openai.com/api-keys) (Gemini and Ollama are supported too!)
 - (OPTIONAL) [Make](https://www.gnu.org/software/make/) (see [Installing Make](#installing-make) below)
 
@@ -79,16 +122,30 @@ This new vision for Archon replaces the old one (the agenteer). Archon used to b
 
    ```bash
    cp .env.example .env
-   # Edit .env and add your Supabase credentials:
-   # SUPABASE_URL=https://your-project.supabase.co
-   # SUPABASE_SERVICE_KEY=your-service-key-here
+   # Edit .env and add your database credentials
+   # See .env.example for both cloud and local database options
    ```
 
-   IMPORTANT NOTES:
-   - For cloud Supabase: they recently introduced a new type of service role key but use the legacy one (the longer one).
-   - For local Supabase: set SUPABASE_URL to http://host.docker.internal:8000 (unless you have an IP address set up).
+   **For Local Database (Recommended):**
+   - Generate credentials: `docker run --rm -v $(pwd)/migration:/migration node:18 node /migration/scripts/generate_jwt.js`
+   - Copy values from `migration/generated_secrets.env.template` to `.env`
+   - See [Database Setup](#database-setup) section above for details
 
-3. **Database Setup**: In your [Supabase project](https://supabase.com/dashboard) SQL Editor, copy, paste, and execute the contents of `migration/complete_setup.sql`
+   **For Cloud Supabase:**
+   - Set `SUPABASE_URL=https://your-project.supabase.co`
+   - Set `SUPABASE_SERVICE_KEY=your-service-key-here`
+   - ⚠️ Use the **service_role** key (longer one), NOT the anon key!
+
+3. **Database Setup**:
+
+   **For Local Database (Recommended):**
+   - Generate credentials: `docker run --rm -v $(pwd)/migration:/migration node:18 node /migration/scripts/generate_jwt.js`
+   - Copy values from `migration/generated_secrets.env.template` to `.env`
+   - Start database: `docker compose --profile localdb up -d`
+   - Initialize schema: `docker exec -i archon-db psql -U postgres -d archon < migration/sql/complete_setup.sql`
+
+   **For Cloud Supabase:**
+   - In your [Supabase project](https://supabase.com/dashboard) SQL Editor, run: `migration/sql/complete_setup.sql`
 
 4. **Start Services** (choose one):
 
@@ -180,21 +237,23 @@ If you need to completely reset your database and start fresh:
 <details>
 <summary>⚠️ <strong>Reset Database - This will delete ALL data for Archon!</strong></summary>
 
-1. **Run Reset Script**: In your Supabase SQL Editor, run the contents of `migration/RESET_DB.sql`
+**For Local Database:**
+```bash
+docker exec -i archon-db psql -U postgres -d archon < migration/sql/RESET_DB.sql
+docker exec -i archon-db psql -U postgres -d archon < migration/sql/complete_setup.sql
+docker compose restart archon-server
+```
 
-   ⚠️ WARNING: This will delete all Archon specific tables and data! Nothing else will be touched in your DB though.
+**For Cloud Supabase:**
+1. In your Supabase SQL Editor, run: `migration/sql/RESET_DB.sql`
+2. Then run: `migration/sql/complete_setup.sql`
+3. Restart services: `docker compose up -d`
 
-2. **Rebuild Database**: After reset, run `migration/complete_setup.sql` to create all the tables again.
+⚠️ WARNING: This will delete all Archon specific tables and data! Nothing else will be touched in your DB though.
 
-3. **Restart Services**:
-
-   ```bash
-   docker compose --profile full up -d
-   ```
-
-4. **Reconfigure**:
-   - Select your LLM/embedding provider and set the API key again
-   - Re-upload any documents or re-crawl websites
+**After Reset:**
+- Select your LLM/embedding provider and set the API key again
+- Re-upload any documents or re-crawl websites
 
 The reset script safely removes all tables, functions, triggers, and policies with proper dependency handling.
 

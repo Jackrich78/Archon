@@ -1,5 +1,8 @@
 __pycache__
 .env
+.env.cloud
+migration/generated_secrets.env.template
+migration/cloud_backup.sql
 .serena
 .claude/settings.local.json
 PRPs/local
@@ -16,3 +19,7 @@ UAT/
 
 # Local release notes testing
 release-notes-*.md
+
+# Migration exports (personal data)
+migration/cloud_export.sql
+migration/**/*.sql.gz
