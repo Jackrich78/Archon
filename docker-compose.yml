@@ -2,10 +2,21 @@
 # - Default (no profile): Starts archon-server, archon-mcp, and archon-frontend
 # - Agents are opt-in: archon-agents starts only with the "agents" profile
 # - Local database: archon-db and archon-postgrest start only with the "localdb" profile
-# Usage:
-#   docker compose up                        # Starts server, mcp, frontend (agents disabled)
-#   docker compose --profile agents up -d    # Also starts archon-agents
-#   docker compose --profile localdb up -d   # Starts local PostgreSQL + PostgREST
+#
+# Quick Start Commands:
+#   docker compose --profile localdb up -d        # Start with local database (RECOMMENDED)
+#   docker compose up -d                          # Start with cloud Supabase
+#   docker compose --profile localdb down         # Stop all services including database
+#   docker compose logs -f archon-db              # View database logs
+#   make restart-localdb                          # Makefile shortcut for local database restart
+#   make stop                                     # Makefile shortcut to stop all services
+#
+# Port Configuration:
+#   - PostgreSQL: 5433 (not 5432 to avoid conflicts)
+#   - PostgREST: 3000
+#   - Archon Server: 8181
+#   - Archon MCP: 8051
+#   - Archon UI: 3737
 
 services:
   # =====================================================
@@ -19,7 +30,7 @@ services:
     image: pgvector/pgvector:pg17
     container_name: archon-db
     ports:
-      - "5432:5432"
+      - "5433:5432"
     environment:
       - POSTGRES_DB=archon
       - POSTGRES_USER=postgres

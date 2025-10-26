@@ -105,13 +105,14 @@ uv run ruff check --fix  # Auto-fix linting issues
 uv run mypy src/         # Type check
 
 # Docker operations
-docker compose up --build -d       # Start all services
+docker compose --profile localdb up -d --build  # Start with local database
 docker compose --profile backend up -d  # Backend only (for hybrid dev)
 docker compose logs -f archon-server   # View server logs
 docker compose logs -f archon-mcp      # View MCP server logs
+docker compose logs -f archon-db       # View database logs
 docker compose restart archon-server   # Restart after code changes
-docker compose down      # Stop all services
-docker compose down -v   # Stop and remove volumes
+docker compose --profile localdb down  # Stop all services including database
+docker compose down -v   # Stop and remove volumes (DELETES DATA!)
 ```
 
 ### Quick Workflows
@@ -120,8 +121,15 @@ docker compose down -v   # Stop and remove volumes
 # Hybrid development (recommended) - backend in Docker, frontend local
 make dev                 # Or manually: docker compose --profile backend up -d && cd archon-ui-main && npm run dev
 
-# Full Docker mode
-make dev-docker          # Or: docker compose up --build -d
+# Full Docker mode with local database
+make restart-localdb     # Or: docker compose --profile localdb up -d --build
+
+# Stop all services (includes database if running)
+make stop                # Or: docker compose --profile localdb down
+
+# View logs
+make logs                # All services
+make db-logs             # Database services only
 
 # Run linters before committing
 make lint                # Runs both frontend and backend linters

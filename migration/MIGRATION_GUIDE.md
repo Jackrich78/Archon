@@ -64,6 +64,8 @@ POSTGRES_PASSWORD=<from generated_secrets.env.template>
 JWT_SECRET=<from generated_secrets.env.template>
 ```
 
+**Important:** Local PostgreSQL runs on port **5433** (not 5432) to avoid conflicts with other databases.
+
 ### 3.2 Start local database
 
 ```bash
@@ -73,8 +75,8 @@ docker compose --profile localdb up -d archon-db archon-postgrest
 **Verify running:**
 ```bash
 docker compose ps
-# archon-db should show "healthy"
-# archon-postgrest should show "running"
+# archon-db should show "healthy" on port 5433
+# archon-postgrest should show "running" on port 3000
 ```
 
 ---
@@ -261,3 +263,37 @@ After successful migration:
 2. **Delete cloud backup** - Free up 577MB disk space (optional)
 3. **Setup automated backups** - See migration/README.md
 4. **Share your experience** - Help others migrate: [GitHub Discussions](https://github.com/coleam00/Archon/discussions)
+
+---
+
+## Important Notes
+
+### Port Configuration
+
+- **PostgreSQL**: Runs on port **5433** (not 5432) to avoid conflicts
+- **PostgREST**: Runs on port **3000**
+- If you need to change the PostgreSQL port, edit `docker-compose.yml` line 22
+
+### Managing Your Local Database
+
+**Always use the `--profile localdb` flag:**
+```bash
+# Start
+docker compose --profile localdb up -d
+
+# Stop
+docker compose --profile localdb down
+
+# Restart
+docker compose --profile localdb restart archon-db
+
+# View logs
+docker compose logs -f archon-db archon-postgrest
+```
+
+**Or use the Makefile shortcuts:**
+```bash
+make restart-localdb  # Restart all services with database
+make stop             # Automatically includes all profiles
+make db-logs          # View database logs
+```

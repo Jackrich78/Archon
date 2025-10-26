@@ -70,6 +70,11 @@ Run your own database - no cloud dependencies, no costs, full control.
    ```
 5. Continue to Quick Start step 4 (Start Services)
 
+**Important Notes:**
+- Local PostgreSQL runs on port **5433** (not 5432) to avoid conflicts with other databases
+- Use `docker compose --profile localdb` for all database operations
+- Data persists in the `archon_postgres_data` Docker volume
+
 ### Alternative: Cloud Supabase
 
 Good for quick testing or if you prefer managed services.
@@ -149,16 +154,26 @@ Good for quick testing or if you prefer managed services.
 
 4. **Start Services** (choose one):
 
-   **Full Docker Mode (Recommended for Normal Archon Usage)**
+   **With Local Database (Recommended)**
 
    ```bash
-   docker compose up --build -d
+   docker compose --profile localdb up -d
    ```
 
-   This starts all core microservices in Docker:
+   This starts all services including local PostgreSQL:
+   - **Database**: PostgreSQL + pgvector (Port: 5433)
+   - **PostgREST**: Database API layer (Port: 3000)
    - **Server**: Core API and business logic (Port: 8181)
    - **MCP Server**: Protocol interface for AI clients (Port: 8051)
    - **UI**: Web interface (Port: 3737)
+
+   **With Cloud Supabase**
+
+   ```bash
+   docker compose up -d
+   ```
+
+   This starts core services only (uses your cloud database).
 
    Ports are configurable in your .env as well!
 
@@ -217,18 +232,103 @@ sudo yum install make
 <summary><strong>🚀 Quick Command Reference for Make</strong></summary>
 <br/>
 
-| Command           | Description                                             |
-| ----------------- | ------------------------------------------------------- |
-| `make dev`        | Start hybrid dev (backend in Docker, frontend local) ⭐ |
-| `make dev-docker` | Everything in Docker                                    |
-| `make stop`       | Stop all services                                       |
-| `make test`       | Run all tests                                           |
-| `make lint`       | Run linters                                             |
-| `make install`    | Install dependencies                                    |
-| `make check`      | Check environment setup                                 |
-| `make clean`      | Remove containers and volumes (with confirmation)       |
+| Command                | Description                                             |
+| ---------------------- | ------------------------------------------------------- |
+| `make dev`             | Start hybrid dev (backend in Docker, frontend local) ⭐ |
+| `make dev-docker`      | Everything in Docker                                    |
+| `make stop`            | Stop all services (including local database)            |
+| `make restart-localdb` | Restart all services with local database                |
+| `make logs`            | View logs for all services                              |
+| `make db-logs`         | View logs for database services only                    |
+| `make test`            | Run all tests                                           |
+| `make lint`            | Run linters                                             |
+| `make install`         | Install dependencies                                    |
+| `make check`           | Check environment setup                                 |
+| `make clean`           | Remove containers and volumes (with confirmation)       |
 
 </details>
+
+## 🔧 Managing Your Archon Instance
+
+### Starting Archon
+
+**With Local Database:**
+```bash
+docker compose --profile localdb up -d
+```
+
+**With Cloud Supabase:**
+```bash
+docker compose up -d
+```
+
+**Using Make (auto-detects your setup):**
+```bash
+make restart-localdb  # Recommended for local database
+```
+
+### Stopping Archon
+
+**Stop all services properly:**
+```bash
+docker compose --profile localdb down  # For local database
+# OR
+docker compose down  # For cloud Supabase
+# OR
+make stop  # Automatically includes all profiles
+```
+
+**Important:** Always use the `--profile localdb` flag when managing local database installations, or use `make stop` which handles this automatically.
+
+### Viewing Logs
+
+```bash
+# All services
+docker compose logs -f
+# OR
+make logs
+
+# Database services only (local database)
+docker compose logs -f archon-db archon-postgrest
+# OR
+make db-logs
+
+# Specific service
+docker compose logs -f archon-server
+docker compose logs -f archon-mcp
+docker compose logs -f archon-ui
+```
+
+### Checking Service Health
+
+```bash
+# List all services with status
+docker compose ps
+
+# Check API health
+curl http://localhost:8181/health
+
+# Check MCP server
+curl http://localhost:8051/health
+```
+
+### Common Operations
+
+**Restart a specific service:**
+```bash
+docker compose restart archon-server
+docker compose restart archon-mcp
+```
+
+**Rebuild after code changes:**
+```bash
+docker compose --profile localdb up -d --build
+```
+
+**View resource usage:**
+```bash
+docker compose stats
+```
 
 ## 🔄 Database Reset (Start Fresh if Needed)
 
@@ -263,12 +363,16 @@ The reset script safely removes all tables, functions, triggers, and policies wi
 
 ### Core Services
 
-| Service            | Container Name | Default URL           | Purpose                           |
-| ------------------ | -------------- | --------------------- | --------------------------------- |
-| **Web Interface**  | archon-ui      | http://localhost:3737 | Main dashboard and controls       |
-| **API Service**    | archon-server  | http://localhost:8181 | Web crawling, document processing |
-| **MCP Server**     | archon-mcp     | http://localhost:8051 | Model Context Protocol interface  |
-| **Agents Service** | archon-agents  | http://localhost:8052 | AI/ML operations, reranking       |  
+| Service              | Container Name   | Default URL/Port      | Purpose                           |
+| -------------------- | ---------------- | --------------------- | --------------------------------- |
+| **Web Interface**    | archon-ui        | http://localhost:3737 | Main dashboard and controls       |
+| **API Service**      | archon-server    | http://localhost:8181 | Web crawling, document processing |
+| **MCP Server**       | archon-mcp       | http://localhost:8051 | Model Context Protocol interface  |
+| **Agents Service**   | archon-agents    | http://localhost:8052 | AI/ML operations, reranking       |
+| **PostgreSQL** *     | archon-db        | localhost:5433        | Local database (with --profile localdb) |
+| **PostgREST** *      | archon-postgrest | http://localhost:3000 | Database API (with --profile localdb) |
+
+\* Only runs when using local database setup with `--profile localdb`  
 
 ## Upgrading
 
@@ -280,9 +384,22 @@ To upgrade Archon to the latest version:
    ```
 
 2. **Rebuild and restart containers**:
+
+   **With Local Database:**
+   ```bash
+   docker compose --profile localdb up -d --build
+   ```
+
+   **With Cloud Supabase:**
    ```bash
    docker compose up -d --build
    ```
+
+   **Using Make:**
+   ```bash
+   make restart-localdb  # For local database
+   ```
+
    This rebuilds containers with the latest code and restarts all services.
 
 3. **Check for database migrations**:
@@ -507,13 +624,21 @@ If you see "Port already in use" errors:
 
 ```bash
 # Check what's using a port (e.g., 3737)
-lsof -i :3737
+lsof -i :3737  # macOS/Linux
+netstat -ano | findstr :3737  # Windows
 
-# Stop all containers and local services
+# Stop all Archon services
 make stop
+# OR
+docker compose --profile localdb down
 
-# Change the port in .env
+# If port 5433 (PostgreSQL) is in use:
+# 1. Check what's using it: lsof -i :5433
+# 2. Either stop that service or change Archon's port in docker-compose.yml
+# 3. The default is 5433 to avoid conflicts with standard PostgreSQL on 5432
 ```
+
+**Note:** Archon's local PostgreSQL uses port **5433** (not 5432) specifically to avoid conflicts with other PostgreSQL installations.
 
 #### Docker Permission Issues (Linux)
 

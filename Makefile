@@ -5,23 +5,26 @@ SHELL := /bin/bash
 # Docker compose command - prefer newer 'docker compose' plugin over standalone 'docker-compose'
 COMPOSE ?= $(shell docker compose version >/dev/null 2>&1 && echo "docker compose" || echo "docker-compose")
 
-.PHONY: help dev dev-docker stop test test-fe test-be lint lint-fe lint-be clean install check
+.PHONY: help dev dev-docker stop restart-localdb logs db-logs test test-fe test-be lint lint-fe lint-be clean install check
 
 help:
 	@echo "Archon Development Commands"
 	@echo "==========================="
-	@echo "  make dev        - Backend in Docker, frontend local (recommended)"
-	@echo "  make dev-docker - Everything in Docker"
-	@echo "  make stop       - Stop all services"
-	@echo "  make test       - Run all tests"
-	@echo "  make test-fe    - Run frontend tests only"
-	@echo "  make test-be    - Run backend tests only"
-	@echo "  make lint       - Run all linters"
-	@echo "  make lint-fe    - Run frontend linter only"
-	@echo "  make lint-be    - Run backend linter only"
-	@echo "  make clean      - Remove containers and volumes"
-	@echo "  make install    - Install dependencies"
-	@echo "  make check      - Check environment setup"
+	@echo "  make dev             - Backend in Docker, frontend local (recommended)"
+	@echo "  make dev-docker      - Everything in Docker"
+	@echo "  make stop            - Stop all services"
+	@echo "  make restart-localdb - Restart all services with local database"
+	@echo "  make logs            - View logs for all services"
+	@echo "  make db-logs         - View logs for database services only"
+	@echo "  make test            - Run all tests"
+	@echo "  make test-fe         - Run frontend tests only"
+	@echo "  make test-be         - Run backend tests only"
+	@echo "  make lint            - Run all linters"
+	@echo "  make lint-fe         - Run frontend linter only"
+	@echo "  make lint-be         - Run backend linter only"
+	@echo "  make clean           - Remove containers and volumes"
+	@echo "  make install         - Install dependencies"
+	@echo "  make check           - Check environment setup"
 
 # Install dependencies
 install:
@@ -65,8 +68,23 @@ dev-docker: check
 # Stop all services
 stop:
 	@echo "Stopping all services..."
-	@$(COMPOSE) --profile backend --profile frontend --profile full down
+	@$(COMPOSE) --profile backend --profile frontend --profile full --profile localdb down
 	@echo "✓ Services stopped"
+
+# Restart local database and all services
+restart-localdb:
+	@echo "Restarting all services with local database..."
+	@$(COMPOSE) --profile localdb down
+	@$(COMPOSE) --profile localdb up -d --build
+	@echo "✓ Services restarted with local database"
+
+# View logs for all services
+logs:
+	@$(COMPOSE) logs -f
+
+# View logs for database services only
+db-logs:
+	@$(COMPOSE) logs -f archon-db archon-postgrest
 
 # Run all tests
 test: test-fe test-be
