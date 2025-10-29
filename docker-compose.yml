@@ -107,6 +107,10 @@ services:
       - ARCHON_HOST=${HOST:-localhost}
     networks:
       - app-network
+    depends_on:
+      archon-postgrest:
+        condition: service_healthy
+        required: false
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock # Docker socket for MCP container control
       - ./python/src:/app/src # Mount source code for hot reload

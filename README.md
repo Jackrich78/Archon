@@ -12,9 +12,9 @@
 
 <p align="center">
   <a href="#quick-start">Quick Start</a> •
-  <a href="#upgrading">Upgrading</a> •
   <a href="#whats-included">What's Included</a> •
   <a href="#architecture">Architecture</a> •
+  <a href="#upgrading">Upgrading</a> •
   <a href="#troubleshooting">Troubleshooting</a>
 </p>
 
@@ -44,50 +44,6 @@ This new vision for Archon replaces the old one (the agenteer). Archon used to b
 - **[Archon Kanban Board](https://github.com/users/coleam00/projects/1)** - Where maintainers are managing issues/features
 - **[Dynamous AI Mastery](https://dynamous.ai)** - The birthplace of Archon - come join a vibrant community of other early AI adopters all helping each other transform their careers and businesses!
 
-## Database Setup
-
-Archon uses PostgreSQL with pgvector. **We recommend local database** for better performance, privacy, and no usage limits.
-
-### Recommended: Local PostgreSQL + PostgREST
-
-Run your own database - no cloud dependencies, no costs, full control.
-
-**Setup:**
-1. Follow Quick Start steps 1-2 (clone repo, create `.env`)
-2. Generate credentials:
-   ```bash
-   docker run --rm -v $(pwd)/migration:/migration node:18 node /migration/scripts/generate_jwt.js
-   ```
-3. Copy values from `migration/generated_secrets.env.template` to `.env`:
-   - `SUPABASE_URL=http://archon-postgrest:3000`
-   - `SUPABASE_SERVICE_KEY=` (from generated file)
-   - `POSTGRES_PASSWORD=` (from generated file)
-   - `JWT_SECRET=` (from generated file)
-4. Start and initialize database:
-   ```bash
-   docker compose --profile localdb up -d
-   docker exec -i archon-db psql -U postgres -d archon < migration/sql/complete_setup.sql
-   ```
-5. Continue to Quick Start step 4 (Start Services)
-
-**Important Notes:**
-- Local PostgreSQL runs on port **5433** (not 5432) to avoid conflicts with other databases
-- Use `docker compose --profile localdb` for all database operations
-- Data persists in the `archon_postgres_data` Docker volume
-
-### Alternative: Cloud Supabase
-
-Good for quick testing or if you prefer managed services.
-
-**Setup:**
-1. Create account at [supabase.com](https://supabase.com/)
-2. Create project, get credentials (Settings → API → **service_role** key)
-3. Set in `.env`: `SUPABASE_URL` and `SUPABASE_SERVICE_KEY`
-4. Run `migration/sql/complete_setup.sql` in Supabase SQL Editor
-5. Continue to Quick Start step 4
-
-**Migrating Cloud→Local?** See [`migration/MIGRATION_GUIDE.md`](migration/MIGRATION_GUIDE.md)
-
 ---
 
 ## Quick Start
@@ -105,56 +61,48 @@ Good for quick testing or if you prefer managed services.
 ### Prerequisites
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-- [Node.js 18+](https://nodejs.org/) (for hybrid development mode)
-- **Database** (choose one):
-  - Cloud Supabase account at [supabase.com](https://supabase.com/) (free tier works), OR
-  - Local PostgreSQL via Docker (included in Archon setup - see [Database Setup](#database-setup))
+- [Node.js 18+](https://nodejs.org/) (for hybrid development mode only)
 - [OpenAI API key](https://platform.openai.com/api-keys) (Gemini and Ollama are supported too!)
-- (OPTIONAL) [Make](https://www.gnu.org/software/make/) (see [Installing Make](#installing-make) below)
+- (OPTIONAL) [Make](https://www.gnu.org/software/make/) (for convenient dev commands)
 
 ### Setup Instructions
 
 1. **Clone Repository**:
    ```bash
    git clone -b stable https://github.com/coleam00/archon.git
-   ```
-   ```bash
    cd archon
    ```
-   
+
    **Note:** The `stable` branch is recommended for using Archon. If you want to contribute or try the latest features, use the `main` branch with `git clone https://github.com/coleam00/archon.git`
+
 2. **Environment Configuration**:
 
    ```bash
    cp .env.example .env
-   # Edit .env and add your database credentials
-   # See .env.example for both cloud and local database options
    ```
 
-   **For Local Database (Recommended):**
-   - Generate credentials: `docker run --rm -v $(pwd)/migration:/migration node:18 node /migration/scripts/generate_jwt.js`
-   - Copy values from `migration/generated_secrets.env.template` to `.env`
-   - See [Database Setup](#database-setup) section above for details
+3. **Database Setup** (Local PostgreSQL - Recommended):
 
-   **For Cloud Supabase:**
-   - Set `SUPABASE_URL=https://your-project.supabase.co`
-   - Set `SUPABASE_SERVICE_KEY=your-service-key-here`
-   - ⚠️ Use the **service_role** key (longer one), NOT the anon key!
+   Generate secure credentials:
+   ```bash
+   docker run --rm -v $(pwd)/migration:/migration node:18 node /migration/scripts/generate_jwt.js
+   ```
 
-3. **Database Setup**:
+   Copy values from `migration/generated_secrets.env.template` to `.env`:
+   ```bash
+   SUPABASE_URL=http://archon-postgrest:3000
+   SUPABASE_SERVICE_KEY=<from generated file>
+   POSTGRES_PASSWORD=<from generated file>
+   JWT_SECRET=<from generated file>
+   ```
 
-   **For Local Database (Recommended):**
-   - Generate credentials: `docker run --rm -v $(pwd)/migration:/migration node:18 node /migration/scripts/generate_jwt.js`
-   - Copy values from `migration/generated_secrets.env.template` to `.env`
-   - Start database: `docker compose --profile localdb up -d`
-   - Initialize schema: `docker exec -i archon-db psql -U postgres -d archon < migration/sql/complete_setup.sql`
+   **Why local database?**
+   - No cloud dependencies or costs
+   - Better performance and privacy
+   - No usage limits
+   - Full control over your data
 
-   **For Cloud Supabase:**
-   - In your [Supabase project](https://supabase.com/dashboard) SQL Editor, run: `migration/sql/complete_setup.sql`
-
-4. **Start Services** (choose one):
-
-   **With Local Database (Recommended)**
+4. **Start Services**:
 
    ```bash
    docker compose --profile localdb up -d
@@ -167,247 +115,25 @@ Good for quick testing or if you prefer managed services.
    - **MCP Server**: Protocol interface for AI clients (Port: 8051)
    - **UI**: Web interface (Port: 3737)
 
-   **With Cloud Supabase**
+   **Note:** Ports are configurable in your `.env` file.
+
+5. **Initialize Database Schema**:
 
    ```bash
-   docker compose up -d
+   docker exec -i archon-db psql -U postgres -d archon < migration/sql/complete_setup.sql
    ```
 
-   This starts core services only (uses your cloud database).
-
-   Ports are configurable in your .env as well!
-
-5. **Configure API Keys**:
+6. **Configure API Keys**:
    - Open http://localhost:3737
    - You'll automatically be brought through an onboarding flow to set your API key (OpenAI is default)
 
-## ⚡ Quick Test
+7. **Test Your Setup**:
+   - **Web Crawling**: Knowledge Base → "Crawl Website" → Try https://ai.pydantic.dev/llms-full.txt
+   - **Document Upload**: Knowledge Base → Upload a PDF
+   - **Projects**: Projects → Create a new project and add tasks
+   - **AI Integration**: MCP Dashboard → Copy connection config for your AI coding assistant
 
-Once everything is running:
-
-1. **Test Web Crawling**: Go to http://localhost:3737 → Knowledge Base → "Crawl Website" → Enter a doc URL (such as https://ai.pydantic.dev/llms-full.txt)
-2. **Test Document Upload**: Knowledge Base → Upload a PDF
-3. **Test Projects**: Projects → Create a new project and add tasks
-4. **Integrate with your AI coding assistant**: MCP Dashboard → Copy connection config for your AI coding assistant 
-
-## Installing Make
-
-<details>
-<summary><strong>🛠️ Make installation (OPTIONAL - For Dev Workflows)</strong></summary>
-
-### Windows
-
-```bash
-# Option 1: Using Chocolatey
-choco install make
-
-# Option 2: Using Scoop
-scoop install make
-
-# Option 3: Using WSL2
-wsl --install
-# Then in WSL: sudo apt-get install make
-```
-
-### macOS
-
-```bash
-# Make comes pre-installed on macOS
-# If needed: brew install make
-```
-
-### Linux
-
-```bash
-# Debian/Ubuntu
-sudo apt-get install make
-
-# RHEL/CentOS/Fedora
-sudo yum install make
-```
-
-</details>
-
-<details>
-<summary><strong>🚀 Quick Command Reference for Make</strong></summary>
-<br/>
-
-| Command                | Description                                             |
-| ---------------------- | ------------------------------------------------------- |
-| `make dev`             | Start hybrid dev (backend in Docker, frontend local) ⭐ |
-| `make dev-docker`      | Everything in Docker                                    |
-| `make stop`            | Stop all services (including local database)            |
-| `make restart-localdb` | Restart all services with local database                |
-| `make logs`            | View logs for all services                              |
-| `make db-logs`         | View logs for database services only                    |
-| `make test`            | Run all tests                                           |
-| `make lint`            | Run linters                                             |
-| `make install`         | Install dependencies                                    |
-| `make check`           | Check environment setup                                 |
-| `make clean`           | Remove containers and volumes (with confirmation)       |
-
-</details>
-
-## 🔧 Managing Your Archon Instance
-
-### Starting Archon
-
-**With Local Database:**
-```bash
-docker compose --profile localdb up -d
-```
-
-**With Cloud Supabase:**
-```bash
-docker compose up -d
-```
-
-**Using Make (auto-detects your setup):**
-```bash
-make restart-localdb  # Recommended for local database
-```
-
-### Stopping Archon
-
-**Stop all services properly:**
-```bash
-docker compose --profile localdb down  # For local database
-# OR
-docker compose down  # For cloud Supabase
-# OR
-make stop  # Automatically includes all profiles
-```
-
-**Important:** Always use the `--profile localdb` flag when managing local database installations, or use `make stop` which handles this automatically.
-
-### Viewing Logs
-
-```bash
-# All services
-docker compose logs -f
-# OR
-make logs
-
-# Database services only (local database)
-docker compose logs -f archon-db archon-postgrest
-# OR
-make db-logs
-
-# Specific service
-docker compose logs -f archon-server
-docker compose logs -f archon-mcp
-docker compose logs -f archon-ui
-```
-
-### Checking Service Health
-
-```bash
-# List all services with status
-docker compose ps
-
-# Check API health
-curl http://localhost:8181/health
-
-# Check MCP server
-curl http://localhost:8051/health
-```
-
-### Common Operations
-
-**Restart a specific service:**
-```bash
-docker compose restart archon-server
-docker compose restart archon-mcp
-```
-
-**Rebuild after code changes:**
-```bash
-docker compose --profile localdb up -d --build
-```
-
-**View resource usage:**
-```bash
-docker compose stats
-```
-
-## 🔄 Database Reset (Start Fresh if Needed)
-
-If you need to completely reset your database and start fresh:
-
-<details>
-<summary>⚠️ <strong>Reset Database - This will delete ALL data for Archon!</strong></summary>
-
-**For Local Database:**
-```bash
-docker exec -i archon-db psql -U postgres -d archon < migration/sql/RESET_DB.sql
-docker exec -i archon-db psql -U postgres -d archon < migration/sql/complete_setup.sql
-docker compose restart archon-server
-```
-
-**For Cloud Supabase:**
-1. In your Supabase SQL Editor, run: `migration/sql/RESET_DB.sql`
-2. Then run: `migration/sql/complete_setup.sql`
-3. Restart services: `docker compose up -d`
-
-⚠️ WARNING: This will delete all Archon specific tables and data! Nothing else will be touched in your DB though.
-
-**After Reset:**
-- Select your LLM/embedding provider and set the API key again
-- Re-upload any documents or re-crawl websites
-
-The reset script safely removes all tables, functions, triggers, and policies with proper dependency handling.
-
-</details>
-
-## 📚 Documentation
-
-### Core Services
-
-| Service              | Container Name   | Default URL/Port      | Purpose                           |
-| -------------------- | ---------------- | --------------------- | --------------------------------- |
-| **Web Interface**    | archon-ui        | http://localhost:3737 | Main dashboard and controls       |
-| **API Service**      | archon-server    | http://localhost:8181 | Web crawling, document processing |
-| **MCP Server**       | archon-mcp       | http://localhost:8051 | Model Context Protocol interface  |
-| **Agents Service**   | archon-agents    | http://localhost:8052 | AI/ML operations, reranking       |
-| **PostgreSQL** *     | archon-db        | localhost:5433        | Local database (with --profile localdb) |
-| **PostgREST** *      | archon-postgrest | http://localhost:3000 | Database API (with --profile localdb) |
-
-\* Only runs when using local database setup with `--profile localdb`  
-
-## Upgrading
-
-To upgrade Archon to the latest version:
-
-1. **Pull latest changes**:
-   ```bash
-   git pull
-   ```
-
-2. **Rebuild and restart containers**:
-
-   **With Local Database:**
-   ```bash
-   docker compose --profile localdb up -d --build
-   ```
-
-   **With Cloud Supabase:**
-   ```bash
-   docker compose up -d --build
-   ```
-
-   **Using Make:**
-   ```bash
-   make restart-localdb  # For local database
-   ```
-
-   This rebuilds containers with the latest code and restarts all services.
-
-3. **Check for database migrations**:
-   - Open the Archon settings in your browser: [http://localhost:3737/settings](http://localhost:3737/settings)
-   - Navigate to the **Database Migrations** section
-   - If there are pending migrations, the UI will display them with clear instructions
-   - Click on each migration to view and copy the SQL
-   - Run the SQL scripts in your Supabase SQL editor in the order shown
+---
 
 ## What's Included
 
@@ -441,6 +167,8 @@ To upgrade Archon to the latest version:
 - **Background Processing**: Asynchronous operations that don't block the user interface
 - **Health Monitoring**: Built-in service health checks and automatic reconnection
 
+---
+
 ## Architecture
 
 ### Microservices Structure
@@ -461,20 +189,33 @@ Archon uses true microservices architecture with clear separation of concerns:
                          ┌─────────────────┐               │
                          │    Database     │               │
                          │                 │               │
-                         │    Supabase     │◄──────────────┘
-                         │    PostgreSQL   │
-                         │    PGVector     │
+                         │   PostgreSQL    │◄──────────────┘
+                         │   + pgvector    │
+                         │  (Local/Cloud)  │
                          └─────────────────┘
 ```
 
 ### Service Responsibilities
 
-| Service        | Location             | Purpose                      | Key Features                                                       |
-| -------------- | -------------------- | ---------------------------- | ------------------------------------------------------------------ |
-| **Frontend**   | `archon-ui-main/`    | Web interface and dashboard  | React, TypeScript, TailwindCSS, Socket.IO client                   |
-| **Server**     | `python/src/server/` | Core business logic and APIs | FastAPI, service layer, Socket.IO broadcasts, all ML/AI operations |
-| **MCP Server** | `python/src/mcp/`    | MCP protocol interface       | Lightweight HTTP wrapper, MCP tools, session management         |
-| **Agents**     | `python/src/agents/` | PydanticAI agent hosting     | Document and RAG agents, streaming responses                       |
+| Service        | Location                 | Purpose                      | Key Features                                                       |
+| -------------- | ------------------------ | ---------------------------- | ------------------------------------------------------------------ |
+| **Frontend**   | `archon-ui-main/`        | Web interface and dashboard  | React, TypeScript, TailwindCSS, Socket.IO client                   |
+| **Server**     | `python/src/server/`     | Core business logic and APIs | FastAPI, service layer, Socket.IO broadcasts, all ML/AI operations |
+| **MCP Server** | `python/src/mcp_server/` | MCP protocol interface       | Lightweight HTTP wrapper, MCP tools, session management            |
+| **Agents**     | `python/src/agents/`     | PydanticAI agent hosting     | Document and RAG agents, streaming responses                       |
+
+### Core Services Reference
+
+| Service              | Container Name   | Default URL/Port      | Purpose                                   |
+| -------------------- | ---------------- | --------------------- | ----------------------------------------- |
+| **Web Interface**    | archon-ui        | http://localhost:3737 | Main dashboard and controls               |
+| **API Service**      | archon-server    | http://localhost:8181 | Web crawling, document processing         |
+| **MCP Server**       | archon-mcp       | http://localhost:8051 | Model Context Protocol interface          |
+| **Agents Service**   | archon-agents    | http://localhost:8052 | AI/ML operations, reranking               |
+| **PostgreSQL** *     | archon-db        | localhost:5433        | Local database (with --profile localdb)   |
+| **PostgREST** *      | archon-postgrest | http://localhost:3000 | Database API (with --profile localdb)     |
+
+\* Only runs when using local database setup with `--profile localdb`
 
 ### Communication Patterns
 
@@ -490,15 +231,21 @@ Archon uses true microservices architecture with clear separation of concerns:
 - **Development Flexibility**: Teams can work on different services without conflicts
 - **Technology Diversity**: Each service uses the best tools for its specific purpose
 
-## 🔧 Configuring Custom Ports & Hostname
+---
 
-By default, Archon services run on the following ports:
+## 🔧 Configuration
+
+<details>
+<summary><strong>Custom Ports & Hostname</strong></summary>
+
+### Default Ports
 
 - **archon-ui**: 3737
 - **archon-server**: 8181
 - **archon-mcp**: 8051
 - **archon-agents**: 8052
-- **archon-docs**: 3838 (optional)
+- **archon-db**: 5433 (local only)
+- **archon-postgrest**: 3000 (local only)
 
 ### Changing Ports
 
@@ -510,45 +257,41 @@ ARCHON_UI_PORT=3737
 ARCHON_SERVER_PORT=8181
 ARCHON_MCP_PORT=8051
 ARCHON_AGENTS_PORT=8052
-ARCHON_DOCS_PORT=3838
-```
-
-Example: Running on different ports:
-
-```bash
-ARCHON_SERVER_PORT=8282
-ARCHON_MCP_PORT=8151
 ```
 
 ### Configuring Hostname
 
-By default, Archon uses `localhost` as the hostname. You can configure a custom hostname or IP address by setting the `HOST` variable in your `.env` file:
+By default, Archon uses `localhost` as the hostname. Configure a custom hostname or IP address:
 
 ```bash
 # Hostname Configuration
 HOST=localhost  # Default
 
-# Examples of custom hostnames:
+# Examples:
 HOST=192.168.1.100     # Use specific IP address
 HOST=archon.local      # Use custom domain
 HOST=myserver.com      # Use public domain
 ```
 
 This is useful when:
-
 - Running Archon on a different machine and accessing it remotely
 - Using a custom domain name for your installation
 - Deploying in a network environment where `localhost` isn't accessible
 
 After changing hostname or ports:
 
-1. Restart Docker containers: `docker compose down && docker compose --profile full up -d`
-2. Access the UI at: `http://${HOST}:${ARCHON_UI_PORT}`
-3. Update your AI client configuration with the new hostname and MCP port
+```bash
+docker compose --profile localdb down
+docker compose --profile localdb up -d --build
+```
+
+</details>
+
+---
 
 ## 🔧 Development
 
-### Quick Start
+### Quick Start for Developers
 
 ```bash
 # Install dependencies
@@ -560,7 +303,7 @@ make dev        # Backend in Docker, frontend local with hot reload
 # Alternative: Everything in Docker
 make dev-docker # All services in Docker
 
-# Stop everything (local FE needs to be stopped manually)
+# Stop everything
 make stop
 ```
 
@@ -569,7 +312,6 @@ make stop
 #### Hybrid Mode (Recommended) - `make dev`
 
 Best for active development with instant frontend updates:
-
 - Backend services run in Docker (isolated, consistent)
 - Frontend runs locally with hot module replacement
 - Instant UI updates without Docker rebuilds
@@ -577,7 +319,6 @@ Best for active development with instant frontend updates:
 #### Full Docker Mode - `make dev-docker`
 
 For all services in Docker environment:
-
 - All services run in Docker containers
 - Better for integration testing
 - Slower frontend updates
@@ -605,14 +346,110 @@ make clean      # Remove containers and volumes (asks for confirmation)
 ### Viewing Logs
 
 ```bash
-# View logs using Docker Compose directly
-docker compose logs -f              # All services
-docker compose logs -f archon-server # API server
-docker compose logs -f archon-mcp    # MCP server
-docker compose logs -f archon-ui     # Frontend
+# All services
+docker compose logs -f
+# OR
+make logs
+
+# Specific service
+docker compose logs -f archon-server
+docker compose logs -f archon-mcp
+docker compose logs -f archon-ui
+docker compose logs -f archon-db        # Local database only
+docker compose logs -f archon-postgrest # Local database only
 ```
 
-**Note**: The backend services are configured with `--reload` flag in their uvicorn commands and have source code mounted as volumes for automatic hot reloading when you make changes.
+**Note**: Backend services are configured with `--reload` flag and have source code mounted as volumes for automatic hot reloading.
+
+<details>
+<summary><strong>🛠️ Installing Make (Optional)</strong></summary>
+
+### Windows
+
+```bash
+# Option 1: Using Chocolatey
+choco install make
+
+# Option 2: Using Scoop
+scoop install make
+
+# Option 3: Using WSL2
+wsl --install
+# Then in WSL: sudo apt-get install make
+```
+
+### macOS
+
+```bash
+# Make comes pre-installed on macOS
+# If needed: brew install make
+```
+
+### Linux
+
+```bash
+# Debian/Ubuntu
+sudo apt-get install make
+
+# RHEL/CentOS/Fedora
+sudo yum install make
+```
+
+### Quick Command Reference
+
+| Command                | Description                                             |
+| ---------------------- | ------------------------------------------------------- |
+| `make dev`             | Start hybrid dev (backend in Docker, frontend local) ⭐ |
+| `make dev-docker`      | Everything in Docker                                    |
+| `make stop`            | Stop all services (including local database)            |
+| `make restart-localdb` | Restart all services with local database                |
+| `make logs`            | View logs for all services                              |
+| `make test`            | Run all tests                                           |
+| `make lint`            | Run linters                                             |
+| `make install`         | Install dependencies                                    |
+| `make check`           | Check environment setup                                 |
+| `make clean`           | Remove containers and volumes (with confirmation)       |
+
+</details>
+
+---
+
+## Upgrading
+
+To upgrade Archon to the latest version:
+
+1. **Pull latest changes**:
+   ```bash
+   git pull
+   ```
+
+2. **Rebuild and restart containers**:
+
+   **With Local Database:**
+   ```bash
+   docker compose --profile localdb up -d --build
+   ```
+
+   **With Cloud Supabase:**
+   ```bash
+   docker compose up -d --build
+   ```
+
+   **Using Make:**
+   ```bash
+   make restart-localdb  # For local database
+   ```
+
+3. **Check for database migrations**:
+   - Open Archon settings: http://localhost:3737/settings
+   - Navigate to **Database Migrations** section
+   - If there are pending migrations, the UI will display them with clear instructions
+   - Click on each migration to view and copy the SQL
+   - Run the SQL scripts in order shown:
+     - **Local Database**: `docker exec -i archon-db psql -U postgres -d archon < migration/sql/<migration_file>.sql`
+     - **Cloud Supabase**: Run in Supabase SQL Editor
+
+---
 
 ## Troubleshooting
 
@@ -628,9 +465,9 @@ lsof -i :3737  # macOS/Linux
 netstat -ano | findstr :3737  # Windows
 
 # Stop all Archon services
-make stop
-# OR
 docker compose --profile localdb down
+# OR
+make stop
 
 # If port 5433 (PostgreSQL) is in use:
 # 1. Check what's using it: lsof -i :5433
@@ -639,6 +476,37 @@ docker compose --profile localdb down
 ```
 
 **Note:** Archon's local PostgreSQL uses port **5433** (not 5432) specifically to avoid conflicts with other PostgreSQL installations.
+
+#### Archon Server Fails to Start ("dependency failed to start")
+
+If you see `dependency failed to start: container archon-server is unhealthy` when running `docker compose --profile localdb up -d`:
+
+**Symptoms:**
+- archon-db and archon-postgrest show as "Healthy"
+- archon-server shows as "Unhealthy"
+- Logs show: `httpx.ConnectError: [Errno -2] Name or service not known`
+
+**Solution:**
+This was fixed in recent versions by adding proper service dependencies. To resolve:
+
+```bash
+# Stop all services
+docker compose --profile localdb down
+
+# Pull latest changes
+git pull
+
+# Restart with build
+docker compose --profile localdb up -d --build
+```
+
+**What was fixed:** The archon-server now waits for archon-postgrest to be healthy before starting, preventing race conditions during startup.
+
+#### Frontend Can't Connect to Backend
+
+- Check backend is running: `curl http://localhost:8181/health`
+- Verify port configuration in `.env`
+- For custom ports, ensure both `ARCHON_SERVER_PORT` and `VITE_ARCHON_SERVER_PORT` are set
 
 #### Docker Permission Issues (Linux)
 
@@ -654,17 +522,11 @@ newgrp docker
 
 #### Windows-Specific Issues
 
-- **Make not found**: Install Make via Chocolatey, Scoop, or WSL2 (see [Installing Make](#installing-make))
+- **Make not found**: Install Make via Chocolatey, Scoop, or WSL2 (see [Installing Make](#development))
 - **Line ending issues**: Configure Git to use LF endings:
   ```bash
   git config --global core.autocrlf false
   ```
-
-#### Frontend Can't Connect to Backend
-
-- Check backend is running: `curl http://localhost:8181/health`
-- Verify port configuration in `.env`
-- For custom ports, ensure both `ARCHON_SERVER_PORT` and `VITE_ARCHON_SERVER_PORT` are set
 
 #### Docker Compose Hangs
 
@@ -683,6 +545,95 @@ docker system prune -f
 - **Frontend**: Ensure you're running in hybrid mode (`make dev`) for best HMR experience
 - **Backend**: Check that volumes are mounted correctly in `docker-compose.yml`
 - **File permissions**: On some systems, mounted volumes may have permission issues
+
+### Checking Service Health
+
+```bash
+# List all services with status
+docker compose ps
+
+# Check API health
+curl http://localhost:8181/health
+
+# Check MCP server
+curl http://localhost:8051/health
+```
+
+### Restarting Services
+
+```bash
+# Restart a specific service
+docker compose restart archon-server
+docker compose restart archon-mcp
+
+# Restart all services
+docker compose --profile localdb down
+docker compose --profile localdb up -d
+```
+
+### Database Operations
+
+#### Reset Database (Start Fresh)
+
+⚠️ **WARNING**: This will delete ALL Archon data!
+
+<details>
+<summary><strong>Click to show reset instructions</strong></summary>
+
+**For Local Database:**
+```bash
+docker exec -i archon-db psql -U postgres -d archon < migration/sql/RESET_DB.sql
+docker exec -i archon-db psql -U postgres -d archon < migration/sql/complete_setup.sql
+docker compose restart archon-server
+```
+
+**For Cloud Supabase:**
+1. In your Supabase SQL Editor, run: `migration/sql/RESET_DB.sql`
+2. Then run: `migration/sql/complete_setup.sql`
+3. Restart services: `docker compose up -d`
+
+**After Reset:**
+- Select your LLM/embedding provider and set the API key again
+- Re-upload any documents or re-crawl websites
+
+The reset script safely removes all tables, functions, triggers, and policies with proper dependency handling.
+
+</details>
+
+---
+
+## Alternative: Cloud Supabase Setup
+
+If you prefer managed database services instead of running PostgreSQL locally:
+
+<details>
+<summary><strong>Cloud Supabase Setup Instructions</strong></summary>
+
+**Good for:**
+- Quick testing without local infrastructure
+- Managed backups and scaling
+- Accessing Archon from multiple locations
+
+**Setup:**
+1. Create account at [supabase.com](https://supabase.com/)
+2. Create new project, get credentials from Settings → API
+3. ⚠️ **Use the service_role key** (longer one), NOT the anon key!
+4. Set in `.env`:
+   ```bash
+   SUPABASE_URL=https://your-project.supabase.co
+   SUPABASE_SERVICE_KEY=your-service-role-key-here
+   ```
+5. In Supabase SQL Editor, run: `migration/sql/complete_setup.sql`
+6. Start services:
+   ```bash
+   docker compose up -d
+   ```
+
+**Migrating from Cloud to Local?** See [`migration/MIGRATION_GUIDE.md`](migration/MIGRATION_GUIDE.md)
+
+</details>
+
+---
 
 ## 📈 Progress
 
